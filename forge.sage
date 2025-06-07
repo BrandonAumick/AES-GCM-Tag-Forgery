@@ -31,24 +31,24 @@ def ghash_poly(blocks, tags):
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-def recover_GHASH_key(ciphertexts, tags):
+def recover_ghash(ciphertexts, tags):
      
-     """
+    """
     Recovers the GHASH key used by AES-GCM with the reused key-IV pair
 
     Args:
-        ciphertexts (list[bytes]): List of ciphertexts encrypted under the same key and IV
-        tags (list[bytes]): Corresponding list of GCM authentication tags
+        ciphertexts (list[bytes]): List of ciphertexts encrypted under the same key and IV, needs 3 values
+        tags (list[bytes]): Corresponding list of matching GCM authentication tags
 
     Returns:
         bytes: The recovered GHASH key, or None if recovery fails
     """
-     
-     print(calcualte_H_list(ciphertexts[:2], tags[:2]))
+    candidate_values = calcualte_H_candidates(ciphertexts[:2], tags[:2])
+    verify_H_candidates(candidate_values, ciphertexts[2], tags[2])
 
 # ---------------------------------------------------------------------------------------------------------------------
      
-def calcualte_H_list(ciphertexts, tags):
+def calcualte_H_candidates(ciphertexts, tags):
       
     """
     Calculates a list of potential H values based on two ciphertext-tag, sets
@@ -71,11 +71,43 @@ def calcualte_H_list(ciphertexts, tags):
     F.<x> = GF(2^128, modulus=a^128 + a^7 + a^2 + a + 1)
     R.<H> = PolynomialRing(F)
     roots = (polynomial).roots()
-    return roots
+    return [root for root, _ in roots]
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+def verify_H_candidates(H_candidates, ciphertext, tag):
+    for root in H_candidates:
+        ghash = compute_ghash(to_blocks(ciphertext), root)
+        print(ghash)
+    return
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+def compute_ghash(blocks, H):
+    """
+    Computes GHASH over blocks using H value.
+
+    Args:
+        blocks (list[bytes]): List of blocks for the GHASH value to be computed over
+        H: H value to be used in the computation
+
+    Returns:
+        Y: Computed GHASH value
+    """
+
+    F.<a> = GF(2)[]
+    F.<x> = GF(2^128)
+    R.<H> = PolynomialRing(F)
+    Q = F(0)
+
+    # TODO: Make this work
+    for block in blocks:
+        Q = (Q ^^ block) * H
+    return Q
 
 # ---------------------------------------------------------------------------------------------------------------------
 
 ciphertexts = [bytes.fromhex("66501a5d46"), bytes.fromhex("7de32966f792"), bytes.fromhex("138a569c71833239ae2f")]
 tags = [int("40975f3152c55989a883aad0339d1cc6", 16), int("f634b6886363dacde6876bbb3384b57a", 16), int("9b2513c334c92864f1ab2d802503a488", 16)]
 
-recover_GHASH_key(ciphertexts, tags)
+recover_ghash(ciphertexts, tags)
