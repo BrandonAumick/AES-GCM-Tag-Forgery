@@ -125,9 +125,51 @@ def recover_key_values(ciphertexts, tags):
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-ciphertexts = [bytes.fromhex("dfc951cfd6a9ed8e6d05ab1c0db08aae25a76890d5690170"), bytes.fromhex("754709425f0363d6e08c0192553d0304abffe5197fe759fd7c"), bytes.fromhex("698e97cb271faa4869f41d5bcbb47b1862616c61632ec77404")]
-tags = [convert_to_poly("ce3141cd2e1288a138ef8e55bdf54ed5"), convert_to_poly("c6e5f4d454408ab3d328b9eb7c996fbb"), convert_to_poly("cdce7aca9f6a4c83de57952e00dcb00f")]
+def main():
 
-recovered_values = recover_key_values(ciphertexts, tags)
-print(f"Recovered H Key:\n{poly_to_bytes(recovered_values['H']).hex()}\n")
-print(f"Recovered Y Value:\n{poly_to_bytes(recovered_values['Y']).hex()}")
+    choice = input("Input file name to load values from or ('new') for new calculation: ").strip()
+
+    if  choice == 'new':
+
+        ciphertexts = []
+        tags = []
+        for i in range(1, 4):
+            ciphertext = bytes.fromhex(input(f"Enter ciphertext {i} (hex): ").strip())
+            tag = convert_to_poly(input(f"Enter tag {i} (hex): ").strip())
+            ciphertexts.append(ciphertext)
+            tags.append(tag)
+
+        recovered_values = recover_key_values(ciphertexts, tags)
+        print(f"\nRecovered H Key: {poly_to_bytes(recovered_values['H']).hex()}")
+        print(f"Recovered Y Value: {poly_to_bytes(recovered_values['Y']).hex()}\n")
+
+    else:
+        with open(choice, "r") as f:
+            loaded_values = eval(f.read())
+        recovered_values = {'H': convert_to_poly(loaded_values['H']), 'Y': convert_to_poly(loaded_values['Y'])}
+
+
+    while True:
+
+        forge = input("Enter ciphertext to forge tag for, ('save FILENAME') to save key values, or ('exit'): ").strip()
+        if forge.lower() == 'exit':
+            break
+        if forge[:4].lower() == 'save':
+            if len(forge) < 6:
+                print("\nMust include a filename to save keys to\n")
+                continue
+            save_values = {'H': poly_to_bytes(recovered_values['H']), 'Y': poly_to_bytes(recovered_values['Y'])}
+            try:
+                with open(forge[5:], "w") as f:
+                    f.write(str(save_values))
+            except:
+                print("Failed to save keys to file")
+            continue
+
+        input_ciphertext = bytes.fromhex(forge)
+        forged_tag = compute_ghash(input_ciphertext, recovered_values['H']) + recovered_values['Y']
+        print(f"\nForged tag: {poly_to_bytes(forged_tag).hex()}\n")
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+main()
