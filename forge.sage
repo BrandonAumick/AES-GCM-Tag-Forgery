@@ -121,7 +121,7 @@ def recover_key_values(ciphertexts, tags):
         if calculated_tag == tags[2]:
             return {"H": candidate, "Y": Y}
     
-    return None
+    return ArithmeticError
 
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -133,13 +133,23 @@ def main():
 
         ciphertexts = []
         tags = []
-        for i in range(1, 4):
-            ciphertext = bytes.fromhex(input(f"Enter ciphertext {i} (hex): ").strip())
-            tag = convert_to_poly(input(f"Enter tag {i} (hex): ").strip())
+        j = 1
+        while j < 4:
+            try:
+                ciphertext = bytes.fromhex(input(f"Enter ciphertext {j} (hex): ").strip())
+                tag = convert_to_poly(input(f"Enter tag {j} (hex): ").strip())
+                j += 1
+            except:
+                print("\nInvalid hex input\n")
+                continue
             ciphertexts.append(ciphertext)
             tags.append(tag)
 
-        recovered_values = recover_key_values(ciphertexts, tags)
+        try:
+            recovered_values = recover_key_values(ciphertexts, tags)
+        except:
+            print("\nUnable to calculate key values based on provided information")
+            return
         print(f"\nRecovered H Key: {poly_to_bytes(recovered_values['H']).hex()}")
         print(f"Recovered Y Value: {poly_to_bytes(recovered_values['Y']).hex()}\n")
 
